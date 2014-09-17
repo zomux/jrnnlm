@@ -1,4 +1,4 @@
-package jrnnlm.test;
+package jrnnlm.test.trains;
 
 import jrnnlm.core.RNNLM;
 import jrnnlm.core.RNNLMConfiguration;
@@ -6,7 +6,7 @@ import jrnnlm.core.RNNLMConfiguration;
 import java.io.IOException;
 import java.util.Arrays;
 
-public class RNNLMLearningTest {
+public class RawDataTest {
 
     public static void main(String[] argv) throws IOException {
 

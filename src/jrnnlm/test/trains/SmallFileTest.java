@@ -1,4 +1,4 @@
-package jrnnlm.test;
+package jrnnlm.test.trains;
 
 import jrnnlm.core.RNNLM;
 import jrnnlm.core.RNNLMConfiguration;
@@ -7,7 +7,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
 
-public class FileLearningTest {
+public class SmallFileTest {
 
     public static void main(String[] argv) throws IOException {
 
