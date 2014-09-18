@@ -17,7 +17,7 @@ public class Synapse {
 
     private void randomlyInit() {
 
-        Random r = new Random();
+        Random r = new Random(RNNLMDefaults.RANDOM_SEED);
         for (int i = 0; i < weights.numRows; ++i) {
             for (int j = 0; j < weights.numCols; ++j) {
                 double value = (r.nextDouble() + r.nextDouble() + r.nextDouble()) - 1.5;

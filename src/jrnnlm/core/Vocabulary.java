@@ -5,7 +5,6 @@ import jrnnlm.utils.Logger;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
-import java.io.InputStreamReader;
 import java.util.HashMap;
 import java.util.Scanner;
 
@@ -18,6 +17,7 @@ public class Vocabulary {
 
         vocabMap = new HashMap<String, Integer>();
         addNewWord("</s>");
+        addNewWord("<unk>");
     }
 
     public void loadRawText(File trainFile) throws FileNotFoundException {
@@ -45,7 +45,7 @@ public class Vocabulary {
             return vocabMap.get(word);
         }
         else {
-            return -1;
+            return 1;
         }
     }
 

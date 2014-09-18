@@ -9,6 +9,7 @@ public class RNNLMConfiguration {
     // Regularization
     public double regularization = RNNLMDefaults.REGULARIZATION;
 
+    // Size
     public int vocabSize = RNNLMDefaults.VOCAB_SIZE;
     public int hiddenSize = RNNLMDefaults.HIDDEN_SIZE;
     public int classSize = RNNLMDefaults.CLASS_SIZE;
@@ -19,6 +20,7 @@ public class RNNLMConfiguration {
     public int bptt = RNNLMDefaults.BPTT;
     public int bpttBlock = RNNLMDefaults.BPTT_BLOCK;
 
+    // Options
     public double minImprovement = RNNLMDefaults.MIN_IMPROVEMENT;
     public double reguralization = RNNLMDefaults.REGULARIZATION;
     public double dynamic = RNNLMDefaults.DYNAMIC;
@@ -31,8 +33,17 @@ public class RNNLMConfiguration {
 
     public boolean alwaysBPTT = RNNLMDefaults.ALWAYS_BPTT;
 
+    // Initialize all weights by 0.1
+    public boolean sameInitialWeights = RNNLMDefaults.SAME_INITIAL_WEIGHTS;
+
+    // Algorithm optimization using fast exp function
+    public boolean fastMath = RNNLMDefaults.FAST_MATH;
+
+
     // Files
     public File trainFile = null;
+    public File validFile = null;
     public int[] trainData = null;
+    public int[] validData = null;
 
 }

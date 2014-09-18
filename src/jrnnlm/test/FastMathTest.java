@@ -1,38 +1,86 @@
 package jrnnlm.test;
 
+
 import jrnnlm.utils.FastMath;
-import jrnnlm.utils.Logger;
+import org.ejml.data.DenseMatrix64F;
+
+import java.util.Arrays;
+import java.util.Random;
 
 public class FastMathTest {
 
     public static void main(String[] argv) {
 
-        Logger.println(String.format("sigmoid: 0.5 -> %f", FastMath.sigmoid(0.5)));
-        Logger.println(String.format("sigmoid: 0 -> %f", FastMath.sigmoid(0)));
-        Logger.println(String.format("sigmoid: -0.5 -> %f", FastMath.sigmoid(-0.5)));
-        Logger.println(String.format("sigmoid: 2 -> %f", FastMath.sigmoid(2)));
+        testResults();
+    }
 
-        Logger.println(String.format("typical sigmoid: 0.5 -> %f", FastMath.accurateSigmoid(0.5)));
-        Logger.println(String.format("typical sigmoid: 0 -> %f", FastMath.accurateSigmoid(0)));
-        Logger.println(String.format("typical sigmoid: -0.5 -> %f", FastMath.accurateSigmoid(-0.5)));
-        Logger.println(String.format("typical sigmoid: 2 -> %f", FastMath.accurateSigmoid(2)));
+    private static void testResults() {
 
-        Logger.println("--- Time Test ---");
-        double x;
-        long startTime = System.nanoTime();
-        for(int i = 0; i < 100000; ++i) {
-            x = FastMath.sigmoid(1.2342);
+        double[] randomNumbers = new double[1000];
+        Random rand = new Random();
+        for(int i = 0; i < randomNumbers.length; ++i) {
+            randomNumbers[i] = rand.nextDouble() - 0.5;
         }
-        long duration = System.nanoTime() - startTime;
-        Logger.println(String.format("FastMath: %d ns", duration));
 
+        DenseMatrix64F vector1 = new DenseMatrix64F(1000, 1);
+        vector1.data = randomNumbers.clone();
+        FastMath.softmax(vector1);
 
-        startTime = System.nanoTime();
-        for(int i = 0; i < 100000; ++i) {
-            x = FastMath.accurateSigmoid(1.2342);
+        DenseMatrix64F vector2 = new DenseMatrix64F(1000, 1);
+        vector2.data = randomNumbers.clone();
+        FastMath.fastSoftmax(vector2);
+
+        System.out.println("SOFTMAX test");
+        for (int i = 0; i < 1000; ++i) {
+            if (Math.abs(vector1.data[i] - vector2.data[i]) > 0.00000001) {
+                System.out.print("#");
+            }
         }
-        duration = System.nanoTime() - startTime;
-        Logger.println(String.format("SlowMath: %d ns", duration));
+    }
+
+    private static void testSpeed() {
+        DenseMatrix64F vector = new DenseMatrix64F(1000, 1);
+
+        long startTime, endTime;
+
+        startTime = System.currentTimeMillis();
+        for (int i = 0; i < 10000; ++i) {
+            Arrays.fill(vector.data, 0.234);
+            FastMath.sigmoid(vector);
+        }
+        endTime = System.currentTimeMillis();
+        System.out.println(String.format("FastMath.sigmoid: %d ms", endTime - startTime));
+
+
+        startTime = System.currentTimeMillis();
+        for (int i = 0; i < 10000; ++i) {
+            Arrays.fill(vector.data, 0.234);
+            FastMath.fastSigmoid(vector);
+        }
+        endTime = System.currentTimeMillis();
+        System.out.println(String.format("FastMath.fastSigmoid: %d ms", endTime - startTime));
+
+        double[] randomNumbers = new double[1000];
+        Random rand = new Random();
+        for(int i = 0; i < randomNumbers.length; ++i) {
+            randomNumbers[i] = rand.nextDouble();
+        }
+
+        startTime = System.currentTimeMillis();
+        for (int i = 0; i < 10000; ++i) {
+            vector.data = randomNumbers.clone();
+            FastMath.softmax(vector);
+        }
+        endTime = System.currentTimeMillis();
+        System.out.println(String.format("FastMath.softmax: %d ms", endTime - startTime));
+
+        startTime = System.currentTimeMillis();
+        for (int i = 0; i < 10000; ++i) {
+            vector.data = randomNumbers.clone();
+            FastMath.fastSoftmax(vector);
+        }
+        endTime = System.currentTimeMillis();
+        System.out.println(String.format("FastMath.fastSoftmax: %d ms", endTime - startTime));
 
     }
 }

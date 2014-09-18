@@ -1,4 +1,4 @@
-package jrnnlm.test.trains;
+package jrnnlm.test.training;
 
 import jrnnlm.core.RNNLM;
 import jrnnlm.core.RNNLMConfiguration;

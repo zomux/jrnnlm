@@ -1,5 +1,6 @@
 package jrnnlm.core;
 
+import javafx.util.Pair;
 import jrnnlm.core.scanner.FileScanner;
 import jrnnlm.core.scanner.RawScanner;
 import jrnnlm.core.scanner.WordIndexScanner;
@@ -11,6 +12,7 @@ import org.ejml.ops.CommonOps;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.DoubleSummaryStatistics;
 
 public class RNNLM {
 
@@ -84,6 +86,13 @@ public class RNNLM {
 
         wordVector = new DenseMatrix64F(outputLayerSize(), 1);
         saver = new LMSaver();
+
+        // Weights
+        if (conf.sameInitialWeights) {
+            Arrays.fill(inputSynapse.weights.getData(), 0.1);
+            Arrays.fill(recurrentSynapse.weights.getData(), 0.1);
+            Arrays.fill(hiddenSynapse.weights.getData(), 0.1);
+        }
     }
 
     public int inputLayerSize() {
@@ -117,7 +126,7 @@ public class RNNLM {
         inputLayer.zero();
         hiddenLayer.zero();
         outputLayer.zero();
-        Arrays.fill(recurrentLayer.neurons.data, 0.1);
+        Arrays.fill(recurrentLayer.activations.data, 0.1);
         recurrentLayer.errors.zero();
     }
 
@@ -152,6 +161,23 @@ public class RNNLM {
             scanner = new RawScanner(conf.trainData);
         }
 
+        // Valid file scanner
+        WordIndexScanner validScanner = null;
+        if (conf.validFile == null && conf.validData == null) {
+            Logger.error("validFile or validData must be set");
+        }
+        if (conf.trainFile != null) {
+            try {
+                validScanner = new FileScanner(vocab, conf.validFile);
+            }
+            catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        else {
+            validScanner = new RawScanner(conf.validData);
+        }
+
         int lastWord, word;
         double logp = 0;
         double lastlogp = -10000000;
@@ -169,10 +195,10 @@ public class RNNLM {
                 ++counter;
                 if (counter % 10000 == 0) System.out.print("#");
                 compute(lastWord, word);
-                logp += Math.log10(outputLayer.neurons.get(word, 0));
+                logp += Math.log10(outputLayer.activations.get(word, 0));
 
                 if (Double.isInfinite(logp)) {
-                    System.err.println(String.format("Infinite error: %d -> %f", word, outputLayer.neurons.get(word, 0)));
+                    System.err.println(String.format("Infinite error: %d -> %f", word, outputLayer.activations.get(word, 0)));
                 }
 
                 // Shift memory needed for bptt to next time step
@@ -192,7 +218,7 @@ public class RNNLM {
                 learn(lastWord, word);
 
                 // Copy hidden layer to recurrent layer
-                recurrentLayer.neurons = hiddenLayer.neurons.copy();
+                recurrentLayer.activations = hiddenLayer.activations.copy();
 
                 lastWord = word;
                 for (int i = conf.maxNgramOrder - 1; i > 0; --i) {
@@ -211,6 +237,12 @@ public class RNNLM {
             double wordsPerSecond = counter / ( (double) (endTime - startTime) / 1000);
             Logger.info(String.format("Iter: %d, Alpha %f, TRAIN entropy: %.4f, Words/sec: %.1f", iterNumber, alpha, -logp / Math.log10(2) / (counter + 1), wordsPerSecond));
 
+            // Valid
+            Pair<Double, Integer> entropyCountPair = estimate(validScanner);
+            logp = entropyCountPair.getKey();
+            Logger.info(String.format("Iter: %d, VALID entropy: %.4f, PPL: %.4f", iterNumber, -logp/Math.log10(2)/entropyCountPair.getValue(), Math.log10(-logp/entropyCountPair.getValue())));
+
+
             // Ending
             if (logp * conf.minImprovement < lastlogp) {
                 saver.restore(this);
@@ -226,13 +258,45 @@ public class RNNLM {
                 saver.save(this);
             }
 
-
             if (conf.alphaDivide) alpha /= 2;
             counter = 0;
             lastlogp = logp;
             logp=0;
             scanner.reset();
+            validScanner.reset();
         }
+    }
+
+    public Pair<Double, Integer> estimate(WordIndexScanner scanner) {
+
+        int lastWord=0;
+        double logp=0;
+        int wordCount=0;
+        int word;
+
+        flush();
+
+        while ((word = scanner.next()) != -1) {
+            // Compute probability
+            compute(lastWord, word);
+            logp += Math.log10(outputLayer.activations.get(word, 0));
+            wordCount += 1;
+
+            // Copy hidden layer to recurrent layer
+            recurrentLayer.activations = hiddenLayer.activations.copy();
+
+            // Ending
+            lastWord = word;
+            for (int i = conf.maxNgramOrder - 1; i > 0; --i) {
+                history[i] = history[i - 1];
+            }
+            history[0]=lastWord;
+
+            if (conf.independent && (word==0)) {
+                reset();
+            }
+        }
+        return new Pair<Double, Integer>(logp, wordCount);
     }
 
     public void learn(int lastWord, int word) {
@@ -245,7 +309,7 @@ public class RNNLM {
 
         // Compute error vectors
         loadWordVector(word);
-        CommonOps.sub(wordVector, outputLayer.neurons, outputLayer.errors);
+        CommonOps.sub(wordVector, outputLayer.activations, outputLayer.errors);
 
         // Flush error
         hiddenLayer.errors.zero();
@@ -260,7 +324,7 @@ public class RNNLM {
         CommonOps.multTransA(hiddenSynapse.weights, outputLayer.errors, hiddenLayer.errors);
 
         // Learn hidden weights
-        hiddenSynapse.learnAll(hiddenLayer.neurons, outputLayer.errors, alpha, beta);
+        hiddenSynapse.learnAll(hiddenLayer.activations, outputLayer.errors, alpha, beta);
 
         // BPTT
 
@@ -283,7 +347,7 @@ public class RNNLM {
                 bpttInputSynapse.learnOneColumn(wordOfStep, hiddenLayer.errors, alpha);
 
                 // RBS[x] += alpha * HL.er[row of x] * RL.ac[col of x]
-                bpttRecurrentSynapse.learnAll(recurrentLayer.neurons, hiddenLayer.errors, alpha, Double.NEGATIVE_INFINITY);
+                bpttRecurrentSynapse.learnAll(recurrentLayer.activations, hiddenLayer.errors, alpha, Double.NEGATIVE_INFINITY);
 
                 // Clean RL.er
                 recurrentLayer.errors.zero();
@@ -295,8 +359,8 @@ public class RNNLM {
                 CommonOps.add(bpttHiddenLayers[step + 1].errors, recurrentLayer.errors, hiddenLayer.errors);
 
                 if (step < maxSteps - 3) {
-                    hiddenLayer.neurons = bpttHiddenLayers[step + 1].neurons.copy();
-                    recurrentLayer.neurons = bpttHiddenLayers[step + 2].neurons.copy();
+                    hiddenLayer.activations = bpttHiddenLayers[step + 1].activations.copy();
+                    recurrentLayer.activations = bpttHiddenLayers[step + 2].activations.copy();
                 }
             }
 
@@ -306,7 +370,7 @@ public class RNNLM {
             }
 
             // HL.ac = BL_0.ac
-            hiddenLayer.neurons = bpttHiddenLayers[0].neurons.copy();
+            hiddenLayer.activations = bpttHiddenLayers[0].activations.copy();
 
             // RS += RBS - regularization (self * beta2)
             recurrentSynapse.accumulate(bpttRecurrentSynapse.weights, (counter%10)==0 ? beta2 : 0);
@@ -325,22 +389,27 @@ public class RNNLM {
     public void compute(int lastWord, int word) {
 
         double activeValue = conf.strengthenLastWord ? 2 : 1;
-        if (lastWord != -1) inputLayer.neurons.set(lastWord, 0, activeValue);
+        if (lastWord != -1) inputLayer.activations.set(lastWord, 0, activeValue);
 
         //Propagate input -> hidden
-        MatrixVectorMult.mult(inputSynapse.weights, inputLayer.neurons, hiddenLayer.neurons);
-        MatrixVectorMult.multAdd(recurrentSynapse.weights, recurrentLayer.neurons, hiddenLayer.neurons);
+        MatrixVectorMult.mult(inputSynapse.weights, inputLayer.activations, hiddenLayer.activations);
+        MatrixVectorMult.multAdd(recurrentSynapse.weights, recurrentLayer.activations, hiddenLayer.activations);
 
         // hidden -> (sigmoid) -> hidden
-        FastMath.sigmoid(hiddenLayer.neurons);
+        if (conf.fastMath) {
+            FastMath.fastSigmoid(hiddenLayer.activations);
+        }
+        else {
+            FastMath.sigmoid(hiddenLayer.activations);
+        }
 
         // TODO: Add compression layer
 
         // TODO: Support class
 
         //Propagate hidden -> output
-        outputLayer.neurons.zero();
-        MatrixVectorMult.mult(hiddenSynapse.weights, hiddenLayer.neurons, outputLayer.neurons);
+        outputLayer.activations.zero();
+        MatrixVectorMult.mult(hiddenSynapse.weights, hiddenLayer.activations, outputLayer.activations);
 
         // TODO: apply direct connections to classes
 
@@ -350,14 +419,21 @@ public class RNNLM {
 
         if (word!=-1) {
             if (conf.classSize == 0) {
-                FastMath.softmax(outputLayer.neurons);
+                if (conf.fastMath) {
+                    // TODO: fastSoftmax make convergence slow here, unveiled by SmallFileTest
+                    FastMath.fastSoftmax(outputLayer.activations);
+                }
+                else {
+                    FastMath.softmax(outputLayer.activations);
+                }
+
             } else {
                 // TODO: support class
                 System.err.println("no class support now!");
             }
         }
 
-        if (lastWord != -1) inputLayer.neurons.set(lastWord, 0, 0);
+        if (lastWord != -1) inputLayer.activations.set(lastWord, 0, 0);
 
 
     }

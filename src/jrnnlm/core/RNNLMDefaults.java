@@ -32,4 +32,10 @@ public class RNNLMDefaults {
     public static final boolean ALPHA_DIVIDE = false;
 
     public static final boolean ALWAYS_BPTT = true;
+
+    public static final boolean SAME_INITIAL_WEIGHTS = false;
+
+    public static final boolean FAST_MATH = true;
+
+    public static final int RANDOM_SEED = 3;
 }
