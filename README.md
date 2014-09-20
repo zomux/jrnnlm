@@ -46,7 +46,7 @@ Size of Hidden Layer
 ---
 - < 1M words: 50 - 200
 - 1m - 10m words: 200 - 300
-- more words: the vocabulary size should be limited, rare words should be mapped to "<unk>"
+- more words: the vocabulary size should be limited, rare words should be mapped to "&lt;unk&gt;"
 
 
 Raphael Shu (2014)
