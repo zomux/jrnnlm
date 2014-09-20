@@ -1,5 +1,7 @@
 package jrnnlm.core;
 
+import java.io.IOException;
+
 public class LMSaver {
 
     private Layer inputLayer;
@@ -33,5 +35,37 @@ public class LMSaver {
         lm.inputSynapse = inputSynapse.copy();
         lm.recurrentSynapse = recurrentSynapse.copy();
         lm.hiddenSynapse = hiddenSynapse.copy();
+    }
+
+    public void zero(RNNLMConfiguration conf) {
+
+        RNNLM lm = null;
+        try {
+            lm = new RNNLM(conf);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        if (lm != null) {
+            lm.inputSynapse.zero();
+            lm.recurrentSynapse.zero();
+            lm.hiddenSynapse.zero();
+            save(lm);
+        }
+
+    }
+
+    public void mergeSynapse(RNNLM lm, double alpha) {
+
+        mergeArray(inputSynapse.weights.data, lm.inputSynapse.weights.data, alpha);
+        mergeArray(recurrentSynapse.weights.data, lm.recurrentSynapse.weights.data, alpha);
+        mergeArray(hiddenSynapse.weights.data, lm.hiddenSynapse.weights.data, alpha);
+    }
+
+    private void mergeArray(double[] targetArray, double[] sourceArray, double alpha) {
+
+        for (int i = 0; i < targetArray.length; ++i) {
+            targetArray[i] += alpha * sourceArray[i];
+        }
     }
 }

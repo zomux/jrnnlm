@@ -17,9 +17,9 @@ public class RNNLMComputeTest {
         lm.hiddenSynapse.weights.setData(new double[]{1,0,0,1});
 
         lm.compute(0, 1);
-        lm.outputLayer.activations.print();
+        lm.outputLayer.neurons.print();
 
         lm.compute(1, 0);
-        lm.outputLayer.activations.print();
+        lm.outputLayer.neurons.print();
     }
 }

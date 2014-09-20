@@ -2,7 +2,7 @@ package jrnnlm.core;
 
 import java.io.File;
 
-public class RNNLMConfiguration {
+public class RNNLMConfiguration implements Cloneable {
 
     // Learning rate
     public double startingAlpha = RNNLMDefaults.STARTING_ALPHA;
@@ -45,5 +45,17 @@ public class RNNLMConfiguration {
     public File validFile = null;
     public int[] trainData = null;
     public int[] validData = null;
+
+    // Vocabulary
+    public Vocabulary vocab = null;
+
+    @Override
+    public RNNLMConfiguration clone() {
+        try {
+            return (RNNLMConfiguration) super.clone();
+        } catch (CloneNotSupportedException e) {
+            throw new InternalError(e.toString());
+        }
+    }
 
 }
