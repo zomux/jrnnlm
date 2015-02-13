@@ -2,6 +2,8 @@ package jrnnlm.core;
 
 import java.io.File;
 
+import jrnnlm.io.InputStreamFactory;
+
 public class RNNLMConfiguration implements Cloneable {
 
     // Learning rate
@@ -41,7 +43,7 @@ public class RNNLMConfiguration implements Cloneable {
 
 
     // Files
-    public File trainFile = null;
+    public InputStreamFactory trainStreamFactory = null;
     public File validFile = null;
     public int[] trainData = null;
     public int[] validData = null;

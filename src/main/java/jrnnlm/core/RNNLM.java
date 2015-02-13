@@ -3,9 +3,11 @@ package jrnnlm.core;
 import javafx.util.Pair;
 import jrnnlm.core.scanner.FileScanner;
 import jrnnlm.core.scanner.RawScanner;
+import jrnnlm.core.scanner.StreamScanner;
 import jrnnlm.core.scanner.WordIndexScanner;
 import jrnnlm.utils.FastMath;
 import jrnnlm.utils.Logger;
+
 import org.ejml.alg.dense.mult.MatrixVectorMult;
 import org.ejml.data.DenseMatrix64F;
 import org.ejml.ops.CommonOps;
@@ -59,9 +61,9 @@ public class RNNLM {
             vocab = conf.vocab;
             conf.vocabSize = vocab.size();
         }
-        else if (conf.trainFile != null) {
+        else if (conf.trainStreamFactory != null) {
             vocab = new Vocabulary();
-            vocab.loadRawText(conf.trainFile);
+            vocab.loadRawText(conf.trainStreamFactory);
             conf.vocabSize = vocab.size();
         }
 
@@ -149,12 +151,12 @@ public class RNNLM {
 
         // Load word scanner
         WordIndexScanner scanner = null;
-        if (conf.trainFile == null && conf.trainData == null) {
-            Logger.error("trainFile or trainData must be set");
+        if (conf.trainStreamFactory == null && conf.trainData == null) {
+            Logger.error("trainStream or trainData must be set");
         }
-        if (conf.trainFile != null) {
+        if (conf.trainStreamFactory != null) {
             try {
-                scanner = new FileScanner(vocab, conf.trainFile);
+                scanner = new StreamScanner(vocab, conf.trainStreamFactory);
             }
             catch (IOException e) {
                 e.printStackTrace();
@@ -169,7 +171,7 @@ public class RNNLM {
         if (conf.validFile == null && conf.validData == null) {
             Logger.error("validFile or validData must be set");
         }
-        if (conf.trainFile != null) {
+        if (conf.validFile != null) {
             try {
                 validScanner = new FileScanner(vocab, conf.validFile);
             }
