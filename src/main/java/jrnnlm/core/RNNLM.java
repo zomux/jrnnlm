@@ -1,5 +1,12 @@
 package jrnnlm.core;
 
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.ObjectOutputStream;
+import java.io.Serializable;
+import java.util.Arrays;
+
 import javafx.util.Pair;
 import jrnnlm.core.scanner.FileScanner;
 import jrnnlm.core.scanner.RawScanner;
@@ -12,10 +19,12 @@ import org.ejml.alg.dense.mult.MatrixVectorMult;
 import org.ejml.data.DenseMatrix64F;
 import org.ejml.ops.CommonOps;
 
-import java.io.IOException;
-import java.util.Arrays;
+public class RNNLM implements Serializable {
 
-public class RNNLM {
+    /**
+   * 
+   */
+  private static final long serialVersionUID = -3124847348419217210L;
 
     // Sizes
     private RNNLMConfiguration conf;
@@ -146,6 +155,10 @@ public class RNNLM {
         Arrays.fill(history, 0);
         Arrays.fill(bpttHistory, -1);
     }
+    
+    public RNNLMConfiguration getConfiguration(){
+      return this.conf;
+    }
 
     public double train() {
 
@@ -199,7 +212,7 @@ public class RNNLM {
 
             while((word = scanner.next()) != -1) {
                 ++counter;
-                if (counter % 10000 == 0) System.out.print("#");
+                if (counter % 1000 == 0) System.out.print("#");
                 compute(lastWord, word);
                 logp += Math.log10(outputLayer.neurons.get(word, 0));
 
@@ -447,7 +460,7 @@ public class RNNLM {
 
 
     }
-
+    
     private void loadWordVector(int word) {
 
         wordVector.zero();

@@ -1,11 +1,16 @@
 package jrnnlm.core;
 
 import java.io.File;
+import java.io.Serializable;
 
 import jrnnlm.io.InputStreamFactory;
 
-public class RNNLMConfiguration implements Cloneable {
+public class RNNLMConfiguration implements Cloneable, Serializable {
 
+    /**
+   * 
+   */
+  private static final long serialVersionUID = 5825674809789075951L;
     // Learning rate
     public double startingAlpha = RNNLMDefaults.STARTING_ALPHA;
     // Regularization

@@ -1,12 +1,16 @@
 package jrnnlm.core;
 
-import org.ejml.data.DenseMatrix64F;
-import org.ejml.ops.CommonOps;
-
+import java.io.Serializable;
 import java.util.Random;
 
-public class Synapse {
+import org.ejml.data.DenseMatrix64F;
 
+public class Synapse implements Serializable{
+
+    /**
+   * 
+   */
+  private static final long serialVersionUID = -3577638952282488060L;
     public DenseMatrix64F weights;
 
     public Synapse(int size1, int size2) {

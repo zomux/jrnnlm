@@ -29,17 +29,18 @@ public class ParallelTrainer {
     private static final File SPLIT_PATH = new File("/tmp");
     private final int cores;
     private final RNNLMConfiguration conf;
+    private final RNNLM lm;
     private final Vocabulary vocab;
 
-    public ParallelTrainer(RNNLMConfiguration conf, int cores, Vocabulary vocab) {
-
+    public ParallelTrainer(RNNLM lm, int cores, Vocabulary vocab) {
+        this.lm = lm;
         this.cores = cores;
-        this.conf = conf;
+        this.conf = lm.getConfiguration();
         this.vocab = vocab;
     }
 
-    public ParallelTrainer(RNNLMConfiguration conf, int cores) {
-      this(conf, cores, null);
+    public ParallelTrainer(RNNLM lm, int cores) {
+      this(lm, cores, null);
     }
     
     public void train() {
@@ -76,7 +77,6 @@ public class ParallelTrainer {
         // Final Valid
         double finalEntropy = 0;
         try {
-            RNNLM lm = new RNNLM(conf);
             if (lm != null && saver != null) {
                 saver.restore(lm);
                 Pair<Double, Integer> logpPair = lm.estimate(new FileScanner(vocab, conf.validFile));

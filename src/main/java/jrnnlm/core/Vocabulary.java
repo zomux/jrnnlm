@@ -1,16 +1,20 @@
 package jrnnlm.core;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Scanner;
 
 import jrnnlm.io.InputStreamFactory;
 import jrnnlm.utils.Logger;
 
-public class Vocabulary {
+public class Vocabulary implements Serializable {
 
+    /**
+   * 
+   */
+  private static final long serialVersionUID = 1149414548501597726L;
     private final HashMap<String, Integer> vocabMap;
     private int size = 0;
 
