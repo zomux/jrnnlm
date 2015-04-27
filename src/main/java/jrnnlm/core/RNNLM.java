@@ -1,19 +1,30 @@
 package jrnnlm.core;
 
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.ObjectOutputStream;
+import java.io.Serializable;
+import java.util.Arrays;
+
 import javafx.util.Pair;
 import jrnnlm.core.scanner.FileScanner;
 import jrnnlm.core.scanner.RawScanner;
+import jrnnlm.core.scanner.StreamScanner;
 import jrnnlm.core.scanner.WordIndexScanner;
 import jrnnlm.utils.FastMath;
 import jrnnlm.utils.Logger;
+
 import org.ejml.alg.dense.mult.MatrixVectorMult;
 import org.ejml.data.DenseMatrix64F;
 import org.ejml.ops.CommonOps;
 
-import java.io.IOException;
-import java.util.Arrays;
+public class RNNLM implements Serializable {
 
-public class RNNLM {
+    /**
+   * 
+   */
+  private static final long serialVersionUID = -3124847348419217210L;
 
     // Sizes
     private RNNLMConfiguration conf;
@@ -59,9 +70,9 @@ public class RNNLM {
             vocab = conf.vocab;
             conf.vocabSize = vocab.size();
         }
-        else if (conf.trainFile != null) {
+        else if (conf.trainStreamFactory != null) {
             vocab = new Vocabulary();
-            vocab.loadRawText(conf.trainFile);
+            vocab.loadRawText(conf.trainStreamFactory);
             conf.vocabSize = vocab.size();
         }
 
@@ -144,17 +155,21 @@ public class RNNLM {
         Arrays.fill(history, 0);
         Arrays.fill(bpttHistory, -1);
     }
+    
+    public RNNLMConfiguration getConfiguration(){
+      return this.conf;
+    }
 
     public double train() {
 
         // Load word scanner
         WordIndexScanner scanner = null;
-        if (conf.trainFile == null && conf.trainData == null) {
-            Logger.error("trainFile or trainData must be set");
+        if (conf.trainStreamFactory == null && conf.trainData == null) {
+            Logger.error("trainStream or trainData must be set");
         }
-        if (conf.trainFile != null) {
+        if (conf.trainStreamFactory != null) {
             try {
-                scanner = new FileScanner(vocab, conf.trainFile);
+                scanner = new StreamScanner(vocab, conf.trainStreamFactory);
             }
             catch (IOException e) {
                 e.printStackTrace();
@@ -169,7 +184,7 @@ public class RNNLM {
         if (conf.validFile == null && conf.validData == null) {
             Logger.error("validFile or validData must be set");
         }
-        if (conf.trainFile != null) {
+        if (conf.validFile != null) {
             try {
                 validScanner = new FileScanner(vocab, conf.validFile);
             }
@@ -197,7 +212,7 @@ public class RNNLM {
 
             while((word = scanner.next()) != -1) {
                 ++counter;
-                if (counter % 10000 == 0) System.out.print("#");
+                if (counter % 1000 == 0) System.out.print("#");
                 compute(lastWord, word);
                 logp += Math.log10(outputLayer.neurons.get(word, 0));
 
@@ -445,7 +460,7 @@ public class RNNLM {
 
 
     }
-
+    
     private void loadWordVector(int word) {
 
         wordVector.zero();

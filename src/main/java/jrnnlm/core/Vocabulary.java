@@ -1,15 +1,20 @@
 package jrnnlm.core;
 
-import jrnnlm.utils.Logger;
-
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Scanner;
 
-public class Vocabulary {
+import jrnnlm.io.InputStreamFactory;
+import jrnnlm.utils.Logger;
 
+public class Vocabulary implements Serializable {
+
+    /**
+   * 
+   */
+  private static final long serialVersionUID = 1149414548501597726L;
     private final HashMap<String, Integer> vocabMap;
     private int size = 0;
 
@@ -20,15 +25,16 @@ public class Vocabulary {
         addNewWord("<unk>");
     }
 
-    public void loadRawText(File trainFile) throws FileNotFoundException {
+    public void loadRawText(InputStreamFactory isFactory) throws IOException {
 
-        Scanner scanner = new Scanner(new FileReader(trainFile));
+        Scanner scanner = new Scanner(new InputStreamReader(isFactory.getInputStream()));
         String word;
         while (scanner.hasNext()) {
             word = scanner.next();
             addNewWord(word);
         }
         Logger.info(String.format("[Vocabulary] size = %d", size));
+        scanner.close();
     }
 
     public void addNewWord(String word) {

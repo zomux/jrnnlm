@@ -1,11 +1,16 @@
 package jrnnlm.core;
 
-import org.ejml.data.DenseMatrix64F;
-
+import java.io.Serializable;
 import java.util.Arrays;
 
-public class Layer {
+import org.ejml.data.DenseMatrix64F;
 
+public class Layer implements Serializable {
+
+    /**
+   * 
+   */
+  private static final long serialVersionUID = -6419267714892946844L;
     public DenseMatrix64F neurons;
     public DenseMatrix64F errors;
     public final int size;

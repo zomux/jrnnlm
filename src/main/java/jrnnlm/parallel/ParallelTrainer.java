@@ -1,14 +1,12 @@
 package jrnnlm.parallel;
 
-import javafx.util.Pair;
-import jrnnlm.core.LMSaver;
-import jrnnlm.core.RNNLM;
-import jrnnlm.core.RNNLMConfiguration;
-import jrnnlm.core.Vocabulary;
-import jrnnlm.core.scanner.FileScanner;
-import jrnnlm.utils.Logger;
-
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -17,46 +15,68 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+import javafx.util.Pair;
+import jrnnlm.core.LMSaver;
+import jrnnlm.core.RNNLM;
+import jrnnlm.core.RNNLMConfiguration;
+import jrnnlm.core.Vocabulary;
+import jrnnlm.core.scanner.FileScanner;
+import jrnnlm.io.FileInputStreamFactory;
+import jrnnlm.utils.Logger;
+
 public class ParallelTrainer {
 
     private static final File SPLIT_PATH = new File("/tmp");
     private final int cores;
     private final RNNLMConfiguration conf;
+    private final RNNLM lm;
+    private final Vocabulary vocab;
 
-    public ParallelTrainer(RNNLMConfiguration conf, int cores) {
-
+    public ParallelTrainer(RNNLM lm, int cores, Vocabulary vocab) {
+        this.lm = lm;
         this.cores = cores;
-        this.conf = conf;
+        this.conf = lm.getConfiguration();
+        this.vocab = vocab;
     }
 
+    public ParallelTrainer(RNNLM lm, int cores) {
+      this(lm, cores, null);
+    }
+    
     public void train() {
 
         // Build vocab
-        Vocabulary vocab = new Vocabulary();
-        try {
-            vocab.loadRawText(conf.trainFile);
-        } catch (FileNotFoundException e) {
+        if(vocab == null){
+          Vocabulary vocab = new Vocabulary();
+          try {
+            vocab.loadRawText(conf.trainStreamFactory);
+          } catch (IOException e) {
             e.printStackTrace();
             return;
+          }
         }
         conf.vocab = vocab;
 
         // Train
         LMSaver saver = null;
         double entropy = 1000000;
-        while (true) {
+        try{
+          while (true) {
             Pair<Double, LMSaver> scoreSaverPair = trainAndMerge(saver);
             double averageEntropy = scoreSaverPair.getKey();
             if (averageEntropy > entropy) break;
             entropy = averageEntropy;
             Logger.info(String.format("[Overall] average entropy: %.4f", averageEntropy));
             saver = scoreSaverPair.getValue();
+          }
+        }catch(IOException e){
+          e.printStackTrace();
+          Logger.error("Could not load files during training.");
+          return;
         }
-
         // Final Valid
         double finalEntropy = 0;
         try {
-            RNNLM lm = new RNNLM(conf);
             if (lm != null && saver != null) {
                 saver.restore(lm);
                 Pair<Double, Integer> logpPair = lm.estimate(new FileScanner(vocab, conf.validFile));
@@ -75,7 +95,7 @@ public class ParallelTrainer {
 
     }
 
-    public Pair<Double, LMSaver> trainAndMerge(LMSaver saver) {
+    public Pair<Double, LMSaver> trainAndMerge(LMSaver saver) throws FileNotFoundException {
 
         List<File> splittedFiles = new ArrayList<File>();
         try {
@@ -83,13 +103,13 @@ public class ParallelTrainer {
         } catch (IOException e) {
             e.printStackTrace();
         }
-        Logger.info(String.format("[ParallelTrainer] split %s \n-> %s", conf.trainFile.toString(), splittedFiles.toString()));
+        Logger.info(String.format("[ParallelTrainer] split %s \n-> %s", conf.trainStreamFactory.toString(), splittedFiles.toString()));
 
         ExecutorService ex = Executors.newFixedThreadPool(cores);
         List<ParallelTrainRunner> runners = new ArrayList<ParallelTrainRunner>();
         for (File part: splittedFiles) {
             RNNLMConfiguration partConf = conf.clone();
-            partConf.trainFile = part;
+            partConf.trainStreamFactory = new FileInputStreamFactory(part);
             ParallelTrainRunner runner = new ParallelTrainRunner(partConf, saver);
             runners.add(runner);
             ex.execute(runner);
@@ -129,7 +149,7 @@ public class ParallelTrainer {
         List<String> lines = new ArrayList<String>();
         List<File> splittedFiles = new ArrayList<File>();
         String line;
-        BufferedReader reader = new BufferedReader(new FileReader(conf.trainFile));
+        BufferedReader reader = new BufferedReader(new InputStreamReader(conf.trainStreamFactory.getInputStream()));
         while ((line = reader.readLine()) != null) {
             lines.add(line);
         }

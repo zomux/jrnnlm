@@ -1,20 +1,23 @@
 package jrnnlm.core.scanner;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+
 import jrnnlm.core.Vocabulary;
+import jrnnlm.io.InputStreamFactory;
 
-import java.io.*;
-
-public class FileScanner implements WordIndexScanner {
+public class StreamScanner implements WordIndexScanner {
 
     private final Vocabulary vocab;
     private BufferedReader reader;
-    private final File file;
+    private final InputStreamFactory is;
 
-    public FileScanner(Vocabulary vocab, File file) throws FileNotFoundException {
+    public StreamScanner(Vocabulary vocab, InputStreamFactory trainStream) throws IOException {
 
         this.vocab = vocab;
-        this.file = file;
-        reader = new BufferedReader(new FileReader(file));
+        this.is = trainStream;
+        reader = new BufferedReader(new InputStreamReader(trainStream.getInputStream()));
     }
 
     @Override
@@ -68,7 +71,7 @@ public class FileScanner implements WordIndexScanner {
 
         try {
             reader.close();
-            reader = new BufferedReader(new FileReader(file));
+            reader = new BufferedReader(new InputStreamReader(is.getInputStream()));
         } catch (IOException e) {
             e.printStackTrace();
         }

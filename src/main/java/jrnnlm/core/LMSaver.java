@@ -1,8 +1,14 @@
 package jrnnlm.core;
 
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.Serializable;
 
-public class LMSaver {
+public class LMSaver implements Serializable {
 
     private Layer inputLayer;
     private Layer outputLayer;
@@ -67,5 +73,36 @@ public class LMSaver {
         for (int i = 0; i < targetArray.length; ++i) {
             targetArray[i] += alpha * sourceArray[i];
         }
+    }
+    
+    public static void save(RNNLM lm, String outputDir) throws FileNotFoundException, IOException{
+      LMSaver saver = new LMSaver();
+      saver.save(lm);
+      ObjectOutputStream oos = null;
+      
+      // write configuration file
+      oos = new ObjectOutputStream(new FileOutputStream(outputDir + "/conf.obj"));
+      oos.writeObject(lm.getConfiguration());
+      oos.close();
+      // write weights
+      oos = new ObjectOutputStream(new FileOutputStream(outputDir + "/saver.obj"));
+      oos.writeObject(saver);
+      oos.close();
+    }
+
+    public static RNNLM load(String inputDir) throws FileNotFoundException, IOException, ClassNotFoundException {
+      ObjectInputStream ois = new ObjectInputStream(new FileInputStream(inputDir + "/conf.obj"));
+      RNNLMConfiguration conf = (RNNLMConfiguration) ois.readObject();
+      ois.close();
+      
+      RNNLM rnnlm = new RNNLM(conf);
+      
+      ois = new ObjectInputStream(new FileInputStream(inputDir + "/saver.obj"));
+      LMSaver saver = (LMSaver) ois.readObject();
+      ois.close();
+      saver.restore(rnnlm);
+      
+      return rnnlm;
+      
     }
 }
